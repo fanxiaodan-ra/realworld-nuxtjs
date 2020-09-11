@@ -64,7 +64,8 @@
               :to="{
                 name: 'home',
                 query: {
-                  page: item
+                  page: item,
+                  tag: $route.query.tag
                 }
               }">{{item}}</nuxt-link>
             </li>
@@ -76,15 +77,17 @@
         <div class="sidebar">
           <p>Popular Tags</p>
 
-          <div class="tag-list">
-            <a href="" class="tag-pill tag-default">programming</a>
-            <a href="" class="tag-pill tag-default">javascript</a>
-            <a href="" class="tag-pill tag-default">emberjs</a>
-            <a href="" class="tag-pill tag-default">angularjs</a>
-            <a href="" class="tag-pill tag-default">react</a>
-            <a href="" class="tag-pill tag-default">mean</a>
-            <a href="" class="tag-pill tag-default">node</a>
-            <a href="" class="tag-pill tag-default">rails</a>
+          <div class="tag-list" >
+            <nuxt-link 
+              :to="{
+                name: 'home',
+                query: {
+                  tag: item
+                }
+              }" 
+              class="tag-pill tag-default"
+              v-for="(item, index) in tags"
+              :key="index"> {{ item }} </nuxt-link>
           </div>
         </div>
       </div>
@@ -96,23 +99,34 @@
 </template>
 <script>
 import { getArticles } from '@/api/article'
+import { getTags } from '@/api/tag'
 export default {
   name:'HomeIndex',
   async asyncData({query}) {
     const limit = 10
     const page = Number.parseInt(query.page) || 1
-    const {data} = await getArticles({
+
+    const [articleRes, tagRes] = await Promise.all([
+      getArticles({
       limit,
+      tag: query.tag,
       offset: (page - 1) * limit
-    })
+      }), 
+      getTags()
+    ])
+
+    const { articles, articlesCount } = articleRes.data
+    const { tags } = tagRes.data
+
     return {
-      articles: data.articles,
-      articlesCount: data.articlesCount,
+      articles,
+      articlesCount,
       page,
-      limit
+      limit,
+      tags
     }
   },
-  watchQuery: ['page'],
+  watchQuery: ['page', 'tag'],
   computed: {
     articleTotal () {
       return Number.parseInt(this.articlesCount / this.limit)

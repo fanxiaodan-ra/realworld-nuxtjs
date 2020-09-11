@@ -7,7 +7,7 @@ module.exports = {
       routes.push(...[
         {
           path: '/',
-          component: resolve(__dirname, 'pages/layout'),
+          component: resolve(__dirname, 'pages/layout/'),
           children: [
             {
               path: '',  //默认子路由
@@ -27,7 +27,7 @@ module.exports = {
             {
               path: '/profile/:username',
               name: 'profile',
-              component: resolve(__dirname, 'pages/profile')
+              component: resolve(__dirname, 'pages/profile/')
             },
             {
               path: '/settings',
