@@ -14,11 +14,27 @@
       <div class="col-md-9">
         <div class="feed-toggle">
           <ul class="nav nav-pills outline-active">
-            <li class="nav-item">
-              <a class="nav-link disabled" href="">Your Feed</a>
+            <li class="nav-item" v-if="user">
+              <nuxt-link :class="['nav-link', {active: tab === 'your_feed'}]" exact :to="{
+                path: '/',
+                query: {
+                  tab: 'your_feed'
+                },
+              }">Your Feed</nuxt-link>
             </li>
             <li class="nav-item">
-              <a class="nav-link active" href="">Global Feed</a>
+              <nuxt-link :class="['nav-link', {active: tab === 'global_feed'}]" exact :to="{
+                path: '/'
+              }">Global Feed</nuxt-link>
+            </li>
+            <li class="nav-item">
+              <nuxt-link :class="['nav-link', {active: tab === 'tag'}]" :to="{
+                path: '/',
+                query: {
+                  tab,
+                  tag
+                }
+              }" exact v-if="tag">{{`# ${tag}`}}</nuxt-link>
             </li>
           </ul>
         </div>
@@ -40,9 +56,9 @@
               }">
                 {{article.author.username}}
               </nuxt-link>
-              <span class="date">{{article.createdAt}}</span>
+              <span class="date">{{article.createdAt | date('MMM DD, YYYY')}}</span>
             </div>
-            <button :class="['btn', 'btn-outline-primary', 'btn-sm', 'pull-xs-right', {'active': article.favorited}]">
+            <button :class="['btn', 'btn-outline-primary', 'btn-sm', 'pull-xs-right', {'active': article.favorited}]" :disabled="article.favoriteDisabled" @click="onFavorite(article)">
               <i class="ion-heart"></i> {{article.favoritesCount}}
             </button>
           </div>
@@ -65,7 +81,8 @@
                 name: 'home',
                 query: {
                   page: item,
-                  tag: $route.query.tag
+                  tag,
+                  tab
                 }
               }">{{item}}</nuxt-link>
             </li>
@@ -82,7 +99,8 @@
               :to="{
                 name: 'home',
                 query: {
-                  tag: item
+                  tag: item,
+                  tab: 'tag',
                 }
               }" 
               class="tag-pill tag-default"
@@ -98,18 +116,21 @@
 </div>
 </template>
 <script>
-import { getArticles } from '@/api/article'
+import { getArticles, getFeedArticles, addFavorite, deleteFavorite } from '@/api/article'
 import { getTags } from '@/api/tag'
+import { mapState } from 'vuex'
 export default {
   name:'HomeIndex',
   async asyncData({query}) {
     const limit = 10
     const page = Number.parseInt(query.page) || 1
-
+    const tab = query.tab || 'global_feed'
+    const tag = query.tag
+    const getArticleApi = tab === 'your_feed' ? getFeedArticles : getArticles
     const [articleRes, tagRes] = await Promise.all([
-      getArticles({
+      getArticleApi({
       limit,
-      tag: query.tag,
+      tag,
       offset: (page - 1) * limit
       }), 
       getTags()
@@ -117,19 +138,40 @@ export default {
 
     const { articles, articlesCount } = articleRes.data
     const { tags } = tagRes.data
+    articles.forEach((item) => {
+      item.favoriteDisabled = false
+    })
 
     return {
       articles,
       articlesCount,
       page,
       limit,
-      tags
+      tags,
+      tab,
+      tag
     }
   },
-  watchQuery: ['page', 'tag'],
+  watchQuery: ['page', 'tag', 'tab'],
   computed: {
+    ...mapState(['user']),
     articleTotal () {
       return Number.parseInt(this.articlesCount / this.limit)
+    }
+  },
+  methods: {
+    async onFavorite(article) {
+      article.favoriteDisabled = true
+      if(article.favorited) {
+        await deleteFavorite(article.slug)
+        article.favorited = false
+        article.favoritesCount += -1
+      } else {
+        await addFavorite(article.slug)
+        article.favorited = true
+        article.favoritesCount += 1
+      }
+      article.favoriteDisabled = false
     }
   },
 }
