@@ -1,5 +1,8 @@
 
 module.exports = {
+  server: {
+    host: '0.0.0.0'
+  },
   router: {
     linkActiveClass: 'active',
     extendRoutes(routes, resolve) {
